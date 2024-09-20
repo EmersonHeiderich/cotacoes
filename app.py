@@ -178,4 +178,4 @@ def process_quotations(cotacao_data, room):
     logger.info("All quotations have been emitted.")
 
 if __name__ == '__main__':
-    socketio.run(app, host='10.1.1.15', port=5000, debug=True)
+    socketio.run(app, host='10.1.1.15', port=5001, debug=True)
