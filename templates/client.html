@@ -1,0 +1,20 @@
+<!-- templates/client.html -->
+{% extends 'base.html' %}
+{% block title %}Dados do Cliente{% endblock %}
+{% block content %}
+<h2>Informe o Cliente</h2>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post">
+    <div class="mb-3">
+        <label for="identifier" class="form-label">Código ou CNPJ do Cliente</label>
+        <input type="text" class="form-control" id="identifier" name="identifier" required>
+    </div>
+    <div class="mb-3">
+        <label for="invoice_value" class="form-label">Valor da Mercadoria</label>
+        <input type="number" step="0.01" class="form-control" id="invoice_value" name="invoice_value" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Continuar</button>
+</form>
+{% endblock %}

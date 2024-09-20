@@ -1,0 +1,126 @@
+<!-- templates/quote_details.html -->
+{% extends 'base.html' %}
+{% block title %}Detalhes da Cotação{% endblock %}
+{% block content %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% else %}
+<h2>Detalhes da Cotação</h2>
+
+<div class="row">
+    <!-- Dados do Cliente -->
+    <div class="col-md-6">
+        <div class="card mb-2" style="font-size: 0.9em;">
+            <div class="card-header py-2">
+                <h6 class="mb-0">Dados do Cliente</h6>
+            </div>
+            <div class="card-body py-2">
+                <p class="card-text mb-0"><strong>Código:</strong> {{ quote.client.code }}</p>
+                <p class="card-text mb-0"><strong>Razão Social:</strong> {{ quote.client.name }}</p>
+                <p class="card-text mb-0"><strong>CNPJ:</strong> {{ quote.client.cnpj }}</p>
+                <p class="card-text mb-0"><strong>Cidade:</strong> {{ quote.client.city_name }} / {{ quote.client.state_abbreviation }}</p>
+                <p class="card-text mb-0"><strong>Endereço:</strong> {{ quote.client.address }}, Nº {{ quote.client.address_number }}</p>
+                <p class="card-text mb-0"><strong>Bairro:</strong> {{ quote.client.neighborhood }}</p>
+                <p class="card-text mb-0"><strong>CEP:</strong> {{ quote.client.cep }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Resumo da Cotação e Embalagens -->
+    <div class="col-md-6">
+        <div class="card mb-2" style="font-size: 0.9em;">
+            <div class="card-header py-2">
+                <h6 class="mb-0">Resumo da Cotação</h6>
+            </div>
+            <div class="card-body py-2">
+                <p class="card-text mb-0"><strong>Protocolo:</strong> {{ quote.protocolo }}</p>
+                <p class="card-text mb-0"><strong>Valor Mercadoria:</strong> R$ {{ "{:,.2f}".format(quote.invoice_value).replace(',', 'X').replace('.', ',').replace('X', '.') }}</p>
+                <p class="card-text mb-0"><strong>Peso Total:</strong> {{ "{:,.2f}".format(quote.total_weight).replace(',', 'X').replace('.', ',').replace('X', '.') }} kg</p>
+                <p class="card-text mb-0"><strong>Nº Pacotes:</strong> {{ quote.total_packages }}</p>
+                <p class="card-text mb-0"><strong>Volume Total:</strong> {{ "{:.4f}".format(quote.total_volume) }} m³</p>
+                <p class="card-text mb-0"><strong>Data da Cotação:</strong> {{ quote.quote_date }}</p>
+                
+                <!-- Embalagens de forma discreta -->
+                <h6 class="mt-3">Resumo das Embalagens</h6>
+                <table class="table table-sm table-bordered mt-2" style="font-size: 0.8em;">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Qtd</th>
+                            <th>Dimensões (cm)</th>
+                            <th>Peso Unit. (kg)</th>
+                            <th>Vol. Unit. (m³)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for package in quote.packages %}
+                        <tr>
+                            <td>Embalagem {{ loop.index }}</td> <!-- Nome padrão -->
+                            <td>{{ package.AmountPackages }}</td>
+                            <td>{{ "{:,.2f}".format(package.Length).replace(',', 'X').replace('.', ',').replace('X', '.') }} x 
+                                {{ "{:,.2f}".format(package.Height).replace(',', 'X').replace('.', ',').replace('X', '.') }} x 
+                                {{ "{:,.2f}".format(package.Width).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                            </td>
+                            <td>{{ "{:,.2f}".format(package.Weight).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+                            <td>{{ "{:.5f}".format(package.volume_unitario) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4>Cotações das Transportadoras</h4>
+<table class="table table-sm table-bordered table-striped" id="responses-table">
+    <thead>
+        <tr>
+            <th>Transportadora</th>
+            <th>Frete</th>
+            <th>% do Frete</th>
+            <th>Prazo (dias)</th>
+            <th>Cotação</th>
+            <th>Modal</th>
+            <th>Mensagem</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for response in quote.responses %}
+        <tr>
+            <td>{{ response.carrier_trade_name }}</td> <!-- Exibe trade_name -->
+            <td>
+                {% if response.shipping_value %}
+                    R$ {{ "{:,.2f}".format(response.shipping_value).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>
+                {% if response.shipping_value %}
+                    {{ "{:.2f}".format(response.frete_percent) }}%
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>{{ response.deadline_days or '-' }}</td>
+            <td>{{ response.quote_carrier or '-' }}</td>
+            <td>{{ response.modal }}</td>
+            <td>{{ response.message or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Botões com Ícones do Font Awesome -->
+<a href="{{ url_for('consultations') }}" class="btn btn-secondary btn-sm">
+    <i class="fas fa-arrow-left"></i> Voltar à Consulta
+</a>
+<a href="{{ url_for('client') }}" class="btn btn-primary btn-sm">
+    <i class="fas fa-plus"></i> Nova Cotação
+</a>
+{% endif %} <!-- Fechamento do bloco if -->
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

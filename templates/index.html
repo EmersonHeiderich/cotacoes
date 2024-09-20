@@ -1,0 +1,7 @@
+<!-- templates/index.html -->
+{% extends 'base.html' %}
+{% block title %}Cotação de Frete{% endblock %}
+{% block content %}
+<h1>Bem-vindo ao Sistema de Cotação de Frete</h1>
+<a href="{{ url_for('client') }}" class="btn btn-primary">Iniciar Cotação</a>
+{% endblock %}

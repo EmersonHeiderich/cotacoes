@@ -1,0 +1,179 @@
+<!-- templates/quotations.html -->
+{% extends 'base.html' %}
+{% block title %}Cotações{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-2" style="font-size: 0.9em;">
+            <div class="card-header py-2">
+                <h6 class="mb-0">Dados do Cliente</h6>
+            </div>
+            <div class="card-body py-2">
+                <p class="card-text mb-0"><strong>Cliente:</strong> {{ client_data.code }} - {{ client_data.name }}</p>
+                <p class="card-text mb-0"><strong>CNPJ:</strong> {{ client_data.cnpj }}</p>
+                <p class="card-text mb-0"><strong>Cidade:</strong> {{ client_data.city_name }} / {{ client_data.state_abbreviation }}</p>
+                <p class="card-text mb-0"><strong>Endereço:</strong> {{ client_data.address }}, Nº {{ client_data.address_number }}</p>
+                <p class="card-text mb-0"><strong>Bairro:</strong> {{ client_data.neighborhood }}</p>
+                <p class="card-text mb-0"><strong>CEP:</strong> {{ client_data.cep }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-2" style="font-size: 0.9em;">
+            <div class="card-header py-2">
+                <h6 class="mb-0">Resumo das Embalagens</h6>
+            </div>
+            <div class="card-body py-2">
+                <p class="card-text mb-0"><strong>Peso Total:</strong> {{ total_weight }} kg</p>
+                <p class="card-text mb-0"><strong>Volume Total:</strong> {{ total_volume }} m³</p>
+                <p class="card-text mb-0"><strong>Número de Pacotes:</strong> {{ total_packages }}</p>
+                <p class="card-text mb-0"><strong>Valor da Mercadoria:</strong> R$ {{ invoice_value }}</p>
+                <table class="table table-sm table-bordered mt-2" style="font-size: 0.8em;">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Qtd</th>
+                            <th>Dimensões (cm)</th>
+                            <th>Peso Unit. (kg)</th>
+                            <th>Vol. Unit. (m³)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for package in packages %}
+                        <tr>
+                            <td>{{ package.nome }}</td>
+                            <td>{{ package.quantidade }}</td>
+                            <td>{{ package.comprimento }} x {{ package.altura }} x {{ package.largura }}</td>
+                            <td>{{ package.peso }}</td>
+                            <td>{{ package.volume_unitario }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h5 class="d-flex justify-content-between align-items-center">
+    <span>Cotações (Protocolo: {{ protocolo }})</span>
+    <span id="loading-indicator" class="d-flex align-items-center">
+        <div class="spinner-border spinner-border-sm text-primary mr-2" role="status">
+            <span class="sr-only">Aguardando...</span>
+        </div>
+        <span>Aguardando cotações...</span>
+    </span>
+</h5>
+
+<table class="table table-sm table-striped" id="quotations-table">
+    <thead>
+        <tr>
+            <th>Transportadora</th>
+            <th>Frete</th>
+            <th>% do frete</th>
+            <th>Prazo (dias)</th>
+            <th>Cotação</th>
+            <th>Modal</th>
+            <th>Mensagem</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- As cotações serão adicionadas dinamicamente via JavaScript -->
+    </tbody>
+</table>
+
+<a href="{{ url_for('client') }}" class="btn btn-primary btn-sm">Nova Cotação</a>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+    const invoiceValue = {{ invoice_value | tojson }};
+    const socket = io();
+
+    socket.on('connect', function() {
+        socket.emit('start_quotation');
+        document.getElementById('loading-indicator').style.display = 'flex';
+    });
+
+    socket.on('new_quotation', function(data) {
+        const cotacao = data.cotacao;
+        const tableBody = document.querySelector('#quotations-table tbody');
+
+        const row = document.createElement('tr');
+
+        const transportadoraCell = document.createElement('td');
+        transportadoraCell.textContent = cotacao.Transportadora || '-';
+        row.appendChild(transportadoraCell);
+
+        const freteCell = document.createElement('td');
+        freteCell.setAttribute('data-frete', cotacao.frete);
+        freteCell.textContent = cotacao.frete ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cotacao.frete) : '-';
+        row.appendChild(freteCell);
+
+        const percentCell = document.createElement('td');
+        if (cotacao.frete && invoiceValue > 0) {
+            const percent = ((cotacao.frete / invoiceValue) * 100).toFixed(2) + '%';
+            percentCell.textContent = percent;
+        } else {
+            percentCell.textContent = '-';
+        }
+        row.appendChild(percentCell);
+
+        const prazoCell = document.createElement('td');
+        prazoCell.textContent = cotacao.prazo || '-';
+        row.appendChild(prazoCell);
+
+        const cotacaoCell = document.createElement('td');
+        cotacaoCell.textContent = cotacao.cotacao || '-';
+        row.appendChild(cotacaoCell);
+
+        const modalCell = document.createElement('td');
+        modalCell.textContent = cotacao.modal || '-';
+        row.appendChild(modalCell);
+
+        const mensagemCell = document.createElement('td');
+        mensagemCell.textContent = cotacao.message || '-';
+        row.appendChild(mensagemCell);
+
+        tableBody.appendChild(row);
+
+        sortQuotationsTable();
+    });
+
+    socket.on('quotation_error', function(data) {
+        alert(data.error);
+    });
+
+    socket.on('quotations_complete', function() {
+        console.log('Todas as cotações foram recebidas.');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        loadingIndicator.innerHTML = '<i class="text-success mr-2">&#10003;</i><span>Sucesso</span>';
+        socket.disconnect();
+    });
+
+    function sortQuotationsTable() {
+        const table = document.getElementById('quotations-table');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        rows.sort((a, b) => {
+            const aFreteAttr = a.querySelector('td[data-frete]').getAttribute('data-frete');
+            const bFreteAttr = b.querySelector('td[data-frete]').getAttribute('data-frete');
+
+            const aFrete = aFreteAttr === '-' ? Infinity : parseFloat(aFreteAttr) || Infinity;
+            const bFrete = bFreteAttr === '-' ? Infinity : parseFloat(bFreteAttr) || Infinity;
+
+            return aFrete - bFrete;
+        });
+
+        while (tbody.firstChild) {
+            tbody.removeChild(tbody.firstChild);
+        }
+
+        rows.forEach(row => {
+            tbody.appendChild(row);
+        });
+    }
+</script>
+{% endblock %}
